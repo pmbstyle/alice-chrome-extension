@@ -1,27 +1,18 @@
-/**
- * Simplified configuration constants for LLM-optimized Chrome Extension
- * Reduces complexity to essential settings only
- */
-
-// Essential WebSocket configuration
 export const WEBSOCKET_CONFIG = {
   URL: 'ws://localhost:5421',
   RECONNECT_INTERVAL: 5000,
-  CONNECTION_TIMEOUT: 15000,  // Increased from 10000ms to 15000ms
+  CONNECTION_TIMEOUT: 15000,
   PING_INTERVAL: 30000,
   AUTO_RECONNECT: true
 };
 
-// Essential content filtering configuration (LLM-optimized)
 export const CONTENT_CONFIG = {
-  // Aggressive filtering for LLM token reduction
-  MIN_TEXT_DENSITY: 0.4,        // Increased for better content quality
-  MAX_LINK_DENSITY: 0.2,        // Decreased to reduce navigation noise
-  MIN_TEXT_LENGTH: 100,         // Increased to filter out small elements
-  MAX_TOKENS: 2000,             // Default token limit for LLM context
-  MAX_LINKS: 10,                // Reduced to most relevant links only
+  MIN_TEXT_DENSITY: 0.4,
+  MAX_LINK_DENSITY: 0.2,
+  MIN_TEXT_LENGTH: 100,
+  MAX_TOKENS: 2000,
+  MAX_LINKS: 10,
   
-  // Essential excluded elements
   EXCLUDED_SELECTORS: [
     'nav', 'header', 'footer', 'aside', '.sidebar', '.navigation',
     '.menu', '.nav', '.navbar', '.breadcrumb', '.pagination',
@@ -31,13 +22,11 @@ export const CONTENT_CONFIG = {
     'script', 'style', 'noscript', 'iframe', 'svg', 'canvas'
   ],
   
-  // Essential content selectors
   CONTENT_SELECTORS: [
     'article', 'main', '[role="main"]', '.content', '.main-content',
     '.article', '.post', '.story', '.entry', '.text-content'
   ],
   
-  // Essential link filtering
   EXCLUDED_LINK_PATTERNS: [
     /login/i, /signin/i, /register/i, /signup/i, /account/i,
     /cart/i, /checkout/i, /search/i, /home/i, /back to top/i,
@@ -48,25 +37,22 @@ export const CONTENT_CONFIG = {
   ]
 };
 
-// Essential browser context configuration
 export const BROWSER_CONTEXT_CONFIG = {
-  CONTENT_SCRIPT_TIMEOUT: 10000,  // Increased from 5000ms to 10000ms
-  TAB_QUERY_TIMEOUT: 5000,        // Increased from 3000ms to 5000ms
-  CONTENT_SCRIPT_INIT_DELAY: 200, // Increased from 100ms to 200ms
+  CONTENT_SCRIPT_TIMEOUT: 10000,
+  TAB_QUERY_TIMEOUT: 5000,
+  CONTENT_SCRIPT_INIT_DELAY: 200,
   RESTRICTED_PROTOCOLS: [
     'chrome:', 'chrome-extension:', 'about:', 'edge:', 'moz-extension:'
   ],
-  CACHE_TIMEOUT: 60000  // Increased from 30000ms to 60000ms (60 seconds)
+  CACHE_TIMEOUT: 60000,
 };
 
-// Essential logging configuration
 export const LOGGING_CONFIG = {
-  LEVEL: 'warn',  // Reduced logging for production
+  LEVEL: 'warn',
   ENABLE_CONSOLE_LOGGING: false,
   MAX_LOG_ENTRIES: 100
 };
 
-// Simplified message types (LLM-optimized)
 export const MESSAGE_TYPES = {
   GET_CONTEXT: 'get_context',
   GET_CONTENT: 'get_content',
@@ -83,38 +69,31 @@ export const MESSAGE_TYPES = {
   ERROR: 'error'
 };
 
-// Content format options
 export const CONTENT_FORMATS = {
-  TEXT: 'text',           // Plain text only (most token-efficient)
-  STRUCTURED: 'structured', // With headings and structure
-  BOTH: 'both'            // Both text and structured
+  TEXT: 'text',
+  STRUCTURED: 'structured',
+  BOTH: 'both',
 };
 
-// Content quality levels
 export const CONTENT_QUALITY = {
   LOW: 'low',
   MEDIUM: 'medium',
   HIGH: 'high'
 };
 
-// Essential error codes
 export const ERROR_CODES = {
-  // WebSocket errors
   WS_CONNECTION_FAILED: 'WS_CONNECTION_FAILED',
   WS_CONNECTION_TIMEOUT: 'WS_CONNECTION_TIMEOUT',
   WS_MESSAGE_PARSE_ERROR: 'WS_MESSAGE_PARSE_ERROR',
   
-  // Browser context errors
   BC_NO_ACTIVE_TAB: 'BC_NO_ACTIVE_TAB',
   BC_RESTRICTED_PAGE: 'BC_RESTRICTED_PAGE',
   BC_CONTENT_SCRIPT_TIMEOUT: 'BC_CONTENT_SCRIPT_TIMEOUT',
   
-  // General errors
   UNKNOWN_ERROR: 'UNKNOWN_ERROR',
   INVALID_REQUEST: 'INVALID_REQUEST'
 };
 
-// Log levels (simplified)
 export const LOG_LEVELS = {
   DEBUG: 0,
   INFO: 1,
@@ -123,7 +102,6 @@ export const LOG_LEVELS = {
   NONE: 4
 };
 
-// Default request options (LLM-optimized)
 export const DEFAULT_REQUEST_OPTIONS = {
   format: CONTENT_FORMATS.TEXT,
   maxTokens: 2000,
@@ -131,15 +109,12 @@ export const DEFAULT_REQUEST_OPTIONS = {
   includeSelection: true
 };
 
-// Simplified configuration - always use localhost
 export function getCurrentEnvironmentConfig() {
   const config = {
     websocket: { url: 'ws://localhost:5421' },
     logging: { level: 'info', enableConsoleLogging: true }
   };
   
-  console.log('[Config] Using simplified localhost configuration');
-  console.log('[Config] WebSocket URL:', config.websocket.url);
   
   return config;
 }
