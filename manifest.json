@@ -4,7 +4,6 @@
   "version": "2.0",
   "description": "Provide comprehensive browser context data to Alice via WebSocket",
   "permissions": [
-    "contextMenus",
     "scripting",
     "activeTab",
     "notifications",
@@ -12,13 +11,15 @@
     "storage"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background/simplified-background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_end"
+      "js": ["src/content/simplified-content.js"],
+      "run_at": "document_end",
+      "type": "module"
     }
   ],
   "icons": {
@@ -29,5 +30,11 @@
   "action": {
     "default_title": "Alice Browser Context"
   },
-  "host_permissions": ["<all_urls>"]
+  "host_permissions": ["<all_urls>"],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/**/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

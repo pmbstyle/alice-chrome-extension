@@ -357,36 +357,6 @@ if (chrome.action && chrome.action.onClicked) {
   console.warn("chrome.action API not available");
 }
 
-// Legacy support for context menu (optional)
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "sendToAlice",
-    title: "Send selection to Alice",
-    contexts: ["selection"],
-  });
-});
-
-chrome.contextMenus.onClicked.addListener(async (info) => {
-  if (info.menuItemId === "sendToAlice" && info.selectionText) {
-    try {
-      await connectWebSocket();
-
-      const message = {
-        type: "legacy_selection",
-        data: {
-          text: info.selectionText,
-          url: info.pageUrl,
-        },
-        timestamp: new Date().toISOString(),
-      };
-
-      await sendWebSocketMessage(message);
-      console.log("Sent selection to Alice:", info.selectionText);
-    } catch (error) {
-      console.error("Failed to send selection:", error);
-    }
-  }
-});
 
 // Initialize connection on extension load
 connectWebSocket().catch((error) => {
