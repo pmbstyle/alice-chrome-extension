@@ -8,7 +8,8 @@ export class SimplifiedConnectionManager {
       connectionTimeout: config.connectionTimeout || WEBSOCKET_CONFIG.CONNECTION_TIMEOUT,
       pingInterval: config.pingInterval || WEBSOCKET_CONFIG.PING_INTERVAL,
       autoReconnect: config.autoReconnect !== false,
-      maxReconnectAttempts: config.maxReconnectAttempts || 5
+      maxReconnectAttempts: config.maxReconnectAttempts || 5,
+      debugMode: config.debugMode || false
     };
 
     this.socket = null;
@@ -20,6 +21,11 @@ export class SimplifiedConnectionManager {
     this.pingInterval = null;
     this.messageHandlers = new Map();
     this.connectionHandlers = new Map();
+    
+    this.lastErrorLogTime = 0;
+    this.errorLogThrottle = 5000;
+    this.recentErrors = new Map();
+    this.maxErrorHistory = 10;
   }
 
   init() {
@@ -44,6 +50,45 @@ export class SimplifiedConnectionManager {
     });
 
     this.on('error', (error) => {
+      if (error && error.isProcessedError) {
+        return;
+      }
+      
+      let errorMessage = 'An unknown error occurred in the connection manager';
+      if (error) {
+        if (typeof error === 'object' && error.message) {
+          errorMessage = error.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
+      }
+      
+      const errorHash = this.createErrorHash(errorMessage);
+      const now = Date.now();
+      
+      if (this.shouldLogError(errorHash, now)) {
+        console.warn('Connection manager issue:', errorMessage);
+        
+        this.lastErrorLogTime = now;
+        this.recentErrors.set(errorHash, now);
+        
+        if (this.recentErrors.size > this.maxErrorHistory) {
+          const oldestKey = this.recentErrors.keys().next().value;
+          this.recentErrors.delete(oldestKey);
+        }
+      }
+      
+      if (!error || !error.fromConnectionManager) {
+        const processedError = {
+          originalError: error,
+          message: errorMessage,
+          timestamp: new Date().toISOString(),
+          isProcessedError: true,
+          fromConnectionManager: true
+        };
+        
+        this.emit('error', processedError);
+      }
     });
   }
 
@@ -82,14 +127,38 @@ export class SimplifiedConnectionManager {
             const message = JSON.parse(event.data);
             this.handleMessage(message);
           } catch (error) {
-            this.emit('error', error);
+            let errorMessage = 'Failed to parse WebSocket message';
+            if (error) {
+              if (typeof error === 'object' && error.message) {
+                errorMessage = error.message;
+              } else if (typeof error === 'string') {
+                errorMessage = error;
+              }
+            }
+            
+            this.emit('error', {
+              originalError: error,
+              message: errorMessage,
+              eventType: 'message',
+              timestamp: new Date().toISOString(),
+              fromConnectionManager: true
+            });
           }
         });
 
         this.socket.addEventListener('error', (error) => {
           clearTimeout(this.connectionTimeout);
           this.isConnecting = false;
-          this.emit('error', error);
+          
+          const processedError = {
+            originalError: error,
+            message: error.message || 'WebSocket connection error',
+            timestamp: new Date().toISOString(),
+            isProcessedError: true,
+            fromConnectionManager: true
+          };
+          
+          this.emit('error', processedError);
           reject(error);
         });
 
@@ -126,7 +195,7 @@ export class SimplifiedConnectionManager {
     this.reconnectAttempts++;
     const delay = Math.min(
       this.config.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1),
-      30000 // Maximum 30 seconds between attempts
+      30000
     );
 
 
@@ -252,6 +321,37 @@ export class SimplifiedConnectionManager {
     this.messageQueue = [];
     this.messageHandlers.clear();
     this.connectionHandlers.clear();
+  }
+
+  /**
+   * Create a hash from error message for duplicate detection
+   */
+  createErrorHash(errorMessage) {
+    let hash = 0;
+    for (let i = 0; i < errorMessage.length; i++) {
+      const char = errorMessage.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash.toString();
+  }
+
+  /**
+   * Determine if an error should be logged based on throttling and duplicate detection
+   */
+  shouldLogError(errorHash, now) {
+    if (now - this.lastErrorLogTime < this.errorLogThrottle) {
+      return false;
+    }
+    
+    if (this.recentErrors.has(errorHash)) {
+      const lastSeen = this.recentErrors.get(errorHash);
+      if (now - lastSeen < 300000) {
+        return false;
+      }
+    }
+    
+    return true;
   }
 }
 

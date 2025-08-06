@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alice Chrome Extension</title>
+    <link rel="stylesheet" href="src/popup/popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <!-- Header Section -->
+        <header class="popup-header">
+            <h1 id="extension-title">Alice Chrome Extension</h1>
+        </header>
+
+        <!-- Connection Status Section -->
+        <section class="status-section" aria-labelledby="status-heading">
+            <h2 id="status-heading" class="visually-hidden">Connection Status</h2>
+            <div class="status-display">
+                <div class="status-indicator-container">
+                    <div id="status-indicator" class="status-indicator" aria-hidden="true"></div>
+                    <span id="status-text" class="status-text">Disconnected</span>
+                </div>
+                
+                <div class="connection-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Reconnect Attempts:</span>
+                        <span id="reconnect-attempts" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Queue Length:</span>
+                        <span id="queue-length" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Last Connection:</span>
+                        <span id="last-connection" class="stat-value">Never</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Configuration Section -->
+        <section class="config-section" aria-labelledby="config-heading">
+            <h2 id="config-heading" class="visually-hidden">Configuration</h2>
+            <div class="config-form">
+                <div class="form-group">
+                    <label for="websocket-host">WebSocket Host:</label>
+                    <input type="text" id="websocket-host" class="form-input" placeholder="e.g., localhost">
+                </div>
+                <div class="form-group">
+                    <label for="websocket-port">WebSocket Port:</label>
+                    <input type="number" id="websocket-port" class="form-input" placeholder="e.g., 5421">
+                </div>
+                <button id="save-config" class="btn btn-primary">Save Configuration</button>
+            </div>
+        </section>
+
+        <!-- Control Section -->
+        <section class="control-section" aria-labelledby="control-heading">
+            <h2 id="control-heading" class="visually-hidden">Controls</h2>
+            <div class="control-buttons">
+                <button id="reconnect-btn" class="btn btn-secondary">Reconnect</button>
+            </div>
+            <div id="error-message" class="error-message" role="alert" aria-live="polite" hidden>
+                <!-- Error messages will be displayed here -->
+            </div>
+        </section>
+    </div>
+
+    <script src="src/popup/popup.js"></script>
+</body>
+</html>

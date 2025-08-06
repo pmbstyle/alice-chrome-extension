@@ -28,7 +28,8 @@
     "128": "icon.png"
   },
   "action": {
-    "default_title": "Alice Browser Context"
+    "default_title": "Alice Browser Context",
+    "default_popup": "popup.html"
   },
   "host_permissions": ["<all_urls>"],
   "web_accessible_resources": [
