@@ -8,7 +8,8 @@
     "activeTab",
     "notifications",
     "tabs",
-    "storage"
+    "storage",
+    "contextMenus"
   ],
   "background": {
     "service_worker": "src/background/simplified-background.js",

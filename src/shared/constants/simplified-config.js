@@ -64,6 +64,7 @@ export const MESSAGE_TYPES = {
   LINKS_RESPONSE: 'links_response',
   SELECTION_RESPONSE: 'selection_response',
   METADATA_RESPONSE: 'metadata_response',
+  CONTEXT_ACTION: 'context_action',
   PING: 'ping',
   PONG: 'pong',
   ERROR: 'error'
@@ -107,6 +108,12 @@ export const DEFAULT_REQUEST_OPTIONS = {
   maxTokens: 2000,
   includeLinks: true,
   includeSelection: true
+};
+
+export const CONTEXT_MENU_ACTIONS = {
+  FACT_CHECK: 'fact_check',
+  SUMMARIZE: 'summarize',
+  TELL_MORE: 'tell_more'
 };
 
 export function getCurrentEnvironmentConfig() {

@@ -5,6 +5,7 @@ import {
   MESSAGE_TYPES,
   ERROR_CODES,
   DEFAULT_REQUEST_OPTIONS,
+  CONTEXT_MENU_ACTIONS,
   getCurrentEnvironmentConfig,
 } from "../shared/constants/simplified-config.js";
 
@@ -89,6 +90,7 @@ async function initialize() {
     });
 
     setupEventListeners();
+    setupContextMenus();
     await connectionManager.connect();
   } catch (error) {
     console.warn("Failed to initialize background script:", error.message);
@@ -104,13 +106,19 @@ function setupEventListeners() {
   }
 
   chrome.runtime.onMessage.addListener(handleMessageFromPopup);
-
   chrome.runtime.onConnect.addListener(handleConnectionFromPopup);
+  
+  if (chrome.contextMenus && chrome.contextMenus.onClicked) {
+    chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
+  }
 }
 
-function handleExtensionInstalled(details) {}
+function handleExtensionInstalled(details) {
+  setupContextMenus();
+}
 
 async function handleExtensionStartup() {
+  setupContextMenus();
   await connectionManager.connect();
 }
 
@@ -777,6 +785,113 @@ function startPingInterval() {
       });
     }
   }, WEBSOCKET_CONFIG.PING_INTERVAL);
+}
+
+function setupContextMenus() {
+  try {
+    if (!chrome.contextMenus) {
+      return;
+    }
+    
+    chrome.contextMenus.removeAll(() => {
+      if (chrome.runtime.lastError) {
+        console.warn('Error removing existing context menus:', chrome.runtime.lastError);
+      }
+
+      try {
+        chrome.contextMenus.create({
+          id: 'alice-parent',
+          title: 'Alice',
+          contexts: ['selection'],
+          documentUrlPatterns: ['http://*/*', 'https://*/*']
+        }, () => {
+          if (chrome.runtime.lastError) {
+            console.warn('Error creating parent menu:', chrome.runtime.lastError);
+            return;
+          }
+
+          chrome.contextMenus.create({
+            id: 'alice-fact-check',
+            parentId: 'alice-parent',
+            title: 'Fact check this',
+            contexts: ['selection'],
+            documentUrlPatterns: ['http://*/*', 'https://*/*']
+          });
+
+          chrome.contextMenus.create({
+            id: 'alice-summarize',
+            parentId: 'alice-parent',
+            title: 'Summarize this',
+            contexts: ['selection'],
+            documentUrlPatterns: ['http://*/*', 'https://*/*']
+          });
+
+          chrome.contextMenus.create({
+            id: 'alice-tell-more',
+            parentId: 'alice-parent',
+            title: 'Tell me more about it',
+            contexts: ['selection'],
+            documentUrlPatterns: ['http://*/*', 'https://*/*']
+          });
+        });
+        
+      } catch (createError) {
+        console.warn('Error during context menu creation:', createError);
+      }
+    });
+  } catch (error) {
+    console.warn('Failed to setup context menus:', error);
+  }
+}
+
+async function handleContextMenuClick(info, tab) {
+  if (!info.selectionText || !info.selectionText.trim()) {
+    return;
+  }
+
+  try {
+    let action;
+    switch (info.menuItemId) {
+      case 'alice-fact-check':
+        action = CONTEXT_MENU_ACTIONS.FACT_CHECK;
+        break;
+      case 'alice-summarize':
+        action = CONTEXT_MENU_ACTIONS.SUMMARIZE;
+        break;
+      case 'alice-tell-more':
+        action = CONTEXT_MENU_ACTIONS.TELL_MORE;
+        break;
+      default:
+        return;
+    }
+
+    await sendContextActionToAlice({
+      action: action,
+      selectedText: info.selectionText.trim(),
+      url: tab.url,
+      title: tab.title,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.warn('Failed to handle context menu click:', error);
+  }
+}
+
+async function sendContextActionToAlice(data) {
+  try {
+    await connectionManager.connect();
+    
+    const message = {
+      type: MESSAGE_TYPES.CONTEXT_ACTION,
+      data: data,
+      timestamp: new Date().toISOString()
+    };
+
+    await connectionManager.send(message);
+  } catch (error) {
+    console.error('Failed to send context action to Alice:', error);
+  }
 }
 
 function cleanup() {

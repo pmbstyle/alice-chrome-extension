@@ -211,6 +211,7 @@ export class SimplifiedConnectionManager {
       
       try {
         await this.connect();
+        this.processMessageQueue();
       } catch (error) {
         throw error;
       }
