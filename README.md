@@ -10,10 +10,11 @@ This Chrome extension provides comprehensive browser context data to the [Alice 
 - **Selection-aware**: Captures user-selected text and surrounding context
 - **Link extraction**: Collects all hyperlinks with their text and URLs
 - **Context menu for selected content**
+  
   Available actions for selected content on the web page:
-  **"Fact check this"**: ask Alice to use a web search to check if the content is fake or true
-  **"Summarize this"**: ask Alice to summarize selected content
-  **"Tell me more about it"**: ask Alice to use a web search to get more information on a selected content
+  - **"Fact check this"**: ask Alice to use a web search to check if the content is fake or true
+  - **"Summarize this"**: ask Alice to summarize selected content
+  - **"Tell me more about it"**: ask Alice to use a web search to get more information on a selected content
 
 ## Installation
 
