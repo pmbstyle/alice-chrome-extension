@@ -14,7 +14,16 @@ export class SimplifiedContentProcessor {
         '.cookie-notice', '.popup', '.modal', '.banner', '.widget',
         'script', 'style', 'noscript', 'iframe', 'svg', 'canvas',
         '.toolbar', '.toolbar-item', '.button', '.btn', '.action',
-        '.form', '.input', '.search', '.filter', '.sort'
+        '.form', '.input', '.search', '.filter', '.sort',
+        '.overlay', '.popup-overlay', '.notification', '.toast',
+        '.loading', '.spinner', '.progress', '.error', '.warning',
+        '.skip-link', '.screen-reader-only', '.visually-hidden',
+        '.print-only', '.no-print', '.hidden', '.collapsed',
+        '.accordion-trigger', '.tab-list', '.tab-panel',
+        '[role="button"]', '[role="tab"]', '[role="tablist"]',
+        '[aria-hidden="true"]', '[style*="display: none"]',
+        '.code-toolbar', '.code-copy', '.line-numbers',
+        '.social', '.share-buttons', '.like-button', '.follow-button'
       ],
       
       contentSelectors: [
@@ -31,13 +40,30 @@ export class SimplifiedContentProcessor {
       minLinkTextLength: 5,
       maxLinkTextLength: 80,
       excludedLinkPatterns: [
-        /login/i, /signin/i, /register/i, /signup/i, /account/i,
-        /cart/i, /checkout/i, /search/i, /home/i, /back to top/i,
-        /privacy/i, /terms/i, /contact/i, /about/i, /help/i,
-        /support/i, /faq/i, /rss/i, /feed/i, /newsletter/i,
-        /subscribe/i, /follow/i, /like/i, /share/i, /tweet/i,
-        /facebook/i, /twitter/i, /instagram/i, /linkedin/i,
-        /click/i, /here/i, /more/i, /read more/i, /continue/i
+
+        /^(login|signin|register|signup|account|profile)$/i,
+        /^(cart|checkout|order|payment|billing)$/i,
+        /^(search|filter|sort|view all|show all)$/i,
+        /^(home|homepage|main page|back to top)$/i,
+        
+
+        /^(click here|here|more|read more|continue|next|prev|previous)$/i,
+        /^(download|install|get|try|start|begin)$/i,
+        /^(edit|delete|remove|add|create|new)$/i,
+        
+
+        /^(share|like|follow|subscribe|join|newsletter)$/i,
+        /^(facebook|twitter|instagram|linkedin|youtube|tiktok)$/i,
+        /^(contact|about|help|support|faq|terms|privacy|policy)$/i,
+        
+
+        /^(loading|error|retry|refresh|reload)$/i,
+        /^[\d\s]*$/,
+        /^[^\w]*$/,
+        /^\s*$/,
+        
+        /(javascript:|#$|mailto:|tel:)/i,
+        /\.(pdf|doc|docx|xls|xlsx|zip|rar|exe)$/i
       ]
     };
     
@@ -132,16 +158,21 @@ export class SimplifiedContentProcessor {
     }
 
     contentElements.sort((a, b) => b.score - a.score);
-    const topElements = contentElements.slice(0, 5);
-
+    
+    // Smart selection: avoid redundant content
+    const selectedElements = this.selectNonOverlappingElements(contentElements.slice(0, 10));
+    
     let text = '';
     const elements = [];
+    let totalScore = 0;
     
-    for (const { element } of topElements) {
+    for (const { element, score } of selectedElements) {
       const elementText = this.extractElementText(element);
       if (elementText.trim().length > 0) {
-        text += elementText + '\n\n';
+        const separator = this.getElementSeparator(element, elements.length);
+        text += elementText + separator;
         elements.push(element);
+        totalScore += score;
       }
     }
 
@@ -250,11 +281,26 @@ export class SimplifiedContentProcessor {
     const textDensity = this.calculateTextDensity(element);
     if (textDensity >= this.config.minTextDensity) {
       score += Math.min(50, textDensity * 100);
+    } else {
+      score -= (this.config.minTextDensity - textDensity) * 30;
     }
     
     const linkDensity = this.calculateLinkDensity(element);
     if (linkDensity > this.config.maxLinkDensity) {
-      score -= Math.min(40, (linkDensity - this.config.maxLinkDensity) * 200);
+      const excessDensity = linkDensity - this.config.maxLinkDensity;
+      score -= Math.min(60, excessDensity * excessDensity * 300);
+    }
+    
+    if (textLength >= 200 && textLength <= 2000) {
+      score += 20;
+    } else if (textLength > 100) {
+      score += 10;
+    }
+    
+    const paragraphs = element.querySelectorAll('p').length;
+    if (paragraphs > 0 && textLength > 500) {
+      const paragraphRatio = Math.min(textLength / paragraphs / 100, 1);
+      score += paragraphRatio * 15;
     }
     
     const tagName = element.tagName.toLowerCase();
@@ -394,39 +440,139 @@ export class SimplifiedContentProcessor {
       }
     }
     
-    if (text.length >= 10 && text.length <= 50) {
-      score += 30;
-    } else if (text.length >= 5 && text.length <= 80) {
-      score += 20;
+    const descriptiveBonus = this.calculateLinkDescriptiveness(text);
+    score += descriptiveBonus * 40;
+    
+    if (text.length >= 15 && text.length <= 40) {
+      score += 35;
+    } else if (text.length >= 8 && text.length <= 60) {
+      score += 25;
     } else {
       score += 10;
     }
     
-    const parent = link.parentElement;
-    if (parent) {
-      const parentTag = parent.tagName.toLowerCase();
-      const parentClass = parent.className || '';
-      
-      if (parentTag === 'p' || parentTag === 'article' || parentTag === 'main') {
-        score += 50;
-      } else if (parentTag === 'section' || parentTag === 'div') {
-        if (parentClass.includes('content') || parentClass.includes('article')) {
-          score += 40;
-        } else {
-          score += 20;
-        }
-      }
+    const contextScore = this.calculateLinkContext(link);
+    score += contextScore;
+    
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+    if (words.length >= 2 && words.length <= 6) {
+      score += 25;
+    } else if (words.length >= 1 && words.length <= 10) {
+      score += 15;
+    } else {
+      score += 5;
     }
     
-    if (text.length > 0) {
-      const words = text.split(' ');
-      if (words.length >= 2 && words.length <= 8) {
-        score += 20;
-      } else if (words.length >= 1 && words.length <= 12) {
-        score += 15;
+    const urlScore = this.calculateUrlQuality(href);
+    score += urlScore;
+    
+    if (/^\d+$/.test(text) || text.toLowerCase() === 'link') {
+      score -= 30;
+    }
+    
+    return Math.max(0, score);
+  }
+  
+  calculateLinkDescriptiveness(text) {
+    const lowerText = text.toLowerCase();
+    let descriptiveness = 0;
+    
+    if (/\b(article|guide|tutorial|review|analysis|study|report|blog|post|news)\b/.test(lowerText)) {
+      descriptiveness += 0.4;
+    }
+    
+    if (/\b(detailed|comprehensive|complete|ultimate|essential|important|key|main|primary)\b/.test(lowerText)) {
+      descriptiveness += 0.2;
+    }
+    
+    const words = text.split(/\s+/);
+    const properNouns = words.filter(word => /^[A-Z][a-z]+/.test(word)).length;
+    descriptiveness += Math.min(0.3, properNouns * 0.1);
+    
+    if (/\b(click|here|more|link|page|site|website|this|that)\b/.test(lowerText)) {
+      descriptiveness -= 0.3;
+    }
+    
+    return Math.max(0, Math.min(1, descriptiveness));
+  }
+  
+  calculateLinkContext(link) {
+    let contextScore = 0;
+    const parent = link.parentElement;
+    
+    if (!parent) return 0;
+    
+    const parentTag = parent.tagName.toLowerCase();
+    const parentClass = parent.className || '';
+    const parentId = parent.id || '';
+    
+    if (parentTag === 'p' || parentTag === 'article' || parentTag === 'main') {
+      contextScore += 50;
+    } else if (parentTag === 'section' || parentTag === 'div') {
+      if (/content|article|post|story|entry/.test(parentClass) || /content|article/.test(parentId)) {
+        contextScore += 45;
       } else {
+        contextScore += 25;
+      }
+    } else if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(parentTag)) {
+      contextScore += 35;
+    } else if (['ul', 'ol', 'li'].includes(parentTag)) {
+      contextScore += 30;
+    }
+    
+    if (/nav|menu|sidebar|footer|header|toolbar/.test(parentClass) ||
+        /nav|menu|sidebar|footer|header|toolbar/.test(parentId)) {
+      contextScore -= 40;
+    }
+    let current = parent;
+    while (current && current !== document.body) {
+      const tag = current.tagName.toLowerCase();
+      const className = current.className || '';
+      const id = current.id || '';
+      
+      if (tag === 'main' || tag === 'article' ||
+          /main|content|article|post/.test(className) ||
+          /main|content|article|post/.test(id)) {
+        contextScore += 20;
+        break;
+      }
+      current = current.parentElement;
+    }
+    
+    return contextScore;
+  }
+  
+  calculateUrlQuality(href) {
+    let score = 0;
+    
+    try {
+      const url = new URL(href);
+      
+      if (url.hostname === window.location.hostname) {
+        score -= 5;
+      } else {
+        score += 10;
+      }
+      
+      const pathSegments = url.pathname.split('/').filter(s => s.length > 0);
+      if (pathSegments.length >= 1 && pathSegments.length <= 4) {
+        score += 10;
+      }
+      
+      if (url.protocol === 'https:') {
         score += 5;
       }
+      
+      if (url.search.length > 100 || url.pathname.length > 200) {
+        score -= 15;
+      }
+      
+      if (/\.(edu|gov|org)$/.test(url.hostname)) {
+        score += 15;
+      }
+      
+    } catch (e) {
+      score -= 20;
     }
     
     return score;
@@ -459,16 +605,152 @@ export class SimplifiedContentProcessor {
   }
 
   assessContentQuality(content) {
-    const { wordCount, elements } = content;
+    const { text, wordCount, elements } = content;
+    let qualityScore = 0;
+    const maxScore = 100;
     
-    if (wordCount < 50) {
-      return 'low';
-    } else if (wordCount < 200) {
-      return 'medium';
-    } else if (elements.length > 0 && elements[0].score > 80) {
+    if (wordCount >= 300) {
+      qualityScore += 25;
+    } else if (wordCount >= 150) {
+      qualityScore += 20;
+    } else if (wordCount >= 75) {
+      qualityScore += 15;
+    } else if (wordCount >= 25) {
+      qualityScore += 10;
+    }
+    
+    if (elements && elements.length > 0) {
+      const avgScore = elements.reduce((sum, el) => sum + (el.score || 0), 0) / elements.length;
+      qualityScore += Math.min(25, avgScore / 4);
+    }
+    
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+    if (sentences.length >= 3) {
+      qualityScore += 10;
+      
+      const avgSentenceLength = wordCount / sentences.length;
+      if (avgSentenceLength >= 10 && avgSentenceLength <= 30) {
+        qualityScore += 10;
+      } else if (avgSentenceLength >= 5) {
+        qualityScore += 5;
+      }
+    }
+    
+    const coherenceScore = this.calculateTextCoherence(text);
+    qualityScore += coherenceScore * 15;
+    
+    const infoScore = this.calculateInformationDensity(text);
+    qualityScore += infoScore * 15;
+    
+    const qualityRatio = qualityScore / maxScore;
+    if (qualityRatio >= 0.8) {
+      return 'excellent';
+    } else if (qualityRatio >= 0.65) {
       return 'high';
-    } else {
+    } else if (qualityRatio >= 0.4) {
       return 'medium';
+    } else if (qualityRatio >= 0.2) {
+      return 'low';
+    } else {
+      return 'poor';
+    }
+  }
+  
+  calculateTextCoherence(text) {
+    if (!text || text.length < 100) return 0;
+    
+    const transitionWords = [
+      'however', 'therefore', 'moreover', 'furthermore', 'additionally',
+      'consequently', 'thus', 'hence', 'meanwhile', 'similarly',
+      'in contrast', 'on the other hand', 'for example', 'specifically',
+      'in particular', 'as a result', 'due to', 'because of'
+    ];
+    
+    const lowerText = text.toLowerCase();
+    const foundTransitions = transitionWords.filter(word => lowerText.includes(word)).length;
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 5).length;
+    
+    return Math.min(1, foundTransitions / Math.max(sentences * 0.2, 1));
+  }
+  
+  calculateInformationDensity(text) {
+    if (!text || text.length < 50) return 0;
+    
+    let infoElements = 0;
+    
+    infoElements += (text.match(/\b\d+(\.\d+)?%?\b/g) || []).length * 0.5;
+    
+    const words = text.split(/\s+/);
+    let properNouns = 0;
+    for (let i = 1; i < words.length; i++) {
+      const word = words[i].replace(/[^\w]/g, '');
+      if (word.length > 2 && word[0] === word[0].toUpperCase() && word.slice(1) === word.slice(1).toLowerCase()) {
+        properNouns++;
+      }
+    }
+    infoElements += properNouns * 0.3;
+    
+    const longWords = words.filter(word => word.length > 6).length;
+    infoElements += longWords * 0.2;
+    
+    infoElements += (text.match(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b|\b\d{4}\b|\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\b/gi) || []).length;
+    
+    return Math.min(1, infoElements / Math.max(words.length * 0.1, 1));
+  }
+  
+  selectNonOverlappingElements(candidates) {
+    if (candidates.length <= 1) return candidates;
+    
+    const selected = [];
+    const maxElements = 5;
+    
+    for (const candidate of candidates) {
+      if (selected.length >= maxElements) break;
+      
+      const hasOverlap = selected.some(selected => 
+        this.elementsOverlap(candidate.element, selected.element)
+      );
+      
+      if (!hasOverlap) {
+        selected.push(candidate);
+      }
+    }
+    
+    return selected.length > 0 ? selected : candidates.slice(0, 1);
+  }
+  
+  elementsOverlap(element1, element2) {
+    if (element1.contains(element2) || element2.contains(element1)) {
+      return true;
+    }
+    
+    const text1 = element1.textContent.trim();
+    const text2 = element2.textContent.trim();
+    
+    if (text1.length < 50 || text2.length < 50) return false;
+    
+    const shorter = text1.length < text2.length ? text1 : text2;
+    const longer = text1.length >= text2.length ? text1 : text2;
+    
+    const sampleLength = Math.min(shorter.length, 200);
+    const sample = shorter.substring(0, sampleLength);
+    
+    return longer.includes(sample);
+  }
+  
+  getElementSeparator(element, elementIndex) {
+    const tagName = element.tagName.toLowerCase();
+    
+    if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
+      return '\n\n';
+    } else if (tagName === 'article' || tagName === 'section') {
+      return '\n\n---\n\n';
+    } else if (tagName === 'p' || tagName === 'div') {
+      return '\n\n';
+    } else if (['ul', 'ol', 'dl'].includes(tagName)) {
+      return '\n\n';
+    } else {
+      return elementIndex === 0 ? '' : '\n\n';
     }
   }
 
