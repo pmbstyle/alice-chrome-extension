@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const websocketPort = document.getElementById('websocket-port');
     const saveConfigBtn = document.getElementById('save-config');
     const reconnectBtn = document.getElementById('reconnect-btn');
+    const successMessage = document.getElementById('success-message');
     const errorMessage = document.getElementById('error-message');
     
     let currentStatus = 'disconnected';
@@ -24,6 +25,10 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     async function initialize() {
         try {
+            // Clear any messages on startup
+            clearError();
+            clearSuccess();
+            
             // Load configuration from storage
             await loadConfiguration();
             
@@ -58,6 +63,10 @@ document.addEventListener('DOMContentLoaded', function() {
             port.onMessage.addListener(function(message) {
                 if (message.type === 'status-update') {
                     updateUIWithStatus(message.status);
+                    // Show success message when connected
+                    if (message.status === 'connected') {
+                        showSuccess('Successfully connected to Alice AI!');
+                    }
                 } else if (message.type === 'error') {
                     showError(message.message);
                 }
@@ -118,6 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
             await updateBackgroundConfig(host, port);
             
             clearError();
+            showSuccess('Configuration saved successfully!');
             
             saveConfigBtn.textContent = 'Saved!';
             setTimeout(() => {
@@ -241,13 +251,16 @@ document.addEventListener('DOMContentLoaded', function() {
         switch (status) {
             case 'connected':
                 statusText.textContent = 'Connected';
+                clearError(); // Clear any connection errors
                 break;
             case 'connecting':
                 statusText.textContent = 'Connecting...';
+                clearSuccess(); // Clear success messages while connecting
                 break;
             case 'disconnected':
             default:
                 statusText.textContent = 'Disconnected';
+                clearSuccess(); // Clear success messages when disconnected
                 break;
         }
         
@@ -277,9 +290,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
+     * Show a success message
+     */
+    function showSuccess(message) {
+        clearError(); // Clear any existing errors
+        
+        let successMessageText = '';
+        
+        if (message) {
+            if (typeof message === 'string') {
+                successMessageText = message;
+            } else if (typeof message === 'object' && message.message) {
+                successMessageText = message.message;
+            }
+        }
+        
+        successMessageText = successMessageText ? successMessageText.trim() : '';
+        
+        if (successMessageText) {
+            successMessage.textContent = successMessageText;
+            setTimeout(clearSuccess, 3000);
+        }
+    }
+    
+    /**
+     * Clear success message
+     */
+    function clearSuccess() {
+        successMessage.textContent = '';
+    }
+    
+    /**
      * Show an error message
      */
     function showError(message) {
+        clearSuccess(); // Clear any existing success messages
         
         let errorMessageText = '';
         
@@ -304,9 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
             errorMessageText = 'An unknown error occurred';
         }
         
-        
         errorMessage.textContent = errorMessageText;
-        errorMessage.removeAttribute('hidden');
         
         setTimeout(clearError, 5000);
     }
@@ -316,7 +359,6 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function clearError() {
         errorMessage.textContent = '';
-        errorMessage.setAttribute('hidden', '');
     }
     
     /**

@@ -310,6 +310,30 @@ body {
   cursor: not-allowed;
 }
 
+/* Success Message */
+.success-message {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  background-color: #f0f8f0;
+  border-radius: calc(var(--border-radius) / 2);
+  color: var(--color-text-success);
+  font-size: var(--font-size-small);
+  margin-bottom: var(--spacing-xs);
+}
+
+.success-message:empty {
+  display: none;
+  margin-bottom: 0;
+}
+
+.success-message::before {
+  content: '✓';
+  flex-shrink: 0;
+  font-weight: bold;
+}
+
 /* Error Message */
 .error-message {
   display: flex;
@@ -318,7 +342,6 @@ body {
   padding: var(--spacing-sm);
   background-color: var(--color-input-error-bg);
   border-radius: calc(var(--border-radius) / 2);
-  min-height: 36px;
   color: var(--color-text-error);
   font-size: var(--font-size-small);
 }

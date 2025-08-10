@@ -913,13 +913,17 @@ startPingInterval();
 self.addEventListener("beforeunload", cleanup);
 
 if (typeof self !== "undefined") {
-  self.getSimplifiedBackgroundStats = () => ({
-    socketConnected: connectionManager && connectionManager.isConnected,
-    messageQueueLength: messageQueue.length,
-    isConnecting: connectionManager && connectionManager.isConnecting,
-    environmentConfig: environmentConfig,
-    timestamp: new Date().toISOString(),
-  });
+  self.getSimplifiedBackgroundStats = () => {
+    const connectionStats = connectionManager ? connectionManager.getStats() : {};
+    return {
+      socketConnected: connectionManager && connectionManager.isConnected,
+      messageQueueLength: connectionStats.messageQueueLength || messageQueue.length,
+      reconnectAttempts: connectionStats.reconnectAttempts || 0,
+      isConnecting: connectionManager && connectionManager.isConnecting,
+      environmentConfig: environmentConfig,
+      timestamp: new Date().toISOString(),
+    };
+  };
 }
 
 let lastConnectionTime = null;
